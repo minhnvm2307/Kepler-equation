@@ -1,0 +1,1170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Kepler Orbit Simulator 3D</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%);
+            color: #ffffff;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+        
+        .sidebar {
+            width: 350px;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .main-view {
+            flex: 1;
+            position: relative;
+        }
+        
+        .section {
+            margin-bottom: 25px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            padding: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .section h3 {
+            color: #64ffda;
+            margin-bottom: 15px;
+            font-size: 16px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .input-group {
+            margin-bottom: 15px;
+        }
+        
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #b0b0b0;
+            font-size: 14px;
+        }
+        
+        .input-group input, .input-group select {
+            width: 100%;
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            color: #ffffff;
+            font-size: 14px;
+        }
+        
+        .input-group input:focus, .input-group select:focus {
+            outline: none;
+            border-color: #64ffda;
+            box-shadow: 0 0 10px rgba(100, 255, 218, 0.3);
+        }
+        
+        .button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(45deg, #64ffda, #00bcd4);
+            border: none;
+            border-radius: 8px;
+            color: #000;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(100, 255, 218, 0.4);
+        }
+        
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+        
+        .results-table th, .results-table td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .results-table th {
+            color: #64ffda;
+            background: rgba(100, 255, 218, 0.1);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .stat-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 10px;
+            border-radius: 6px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #64ffda;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #b0b0b0;
+            margin-top: 5px;
+        }
+        
+        .controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(10px);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .control-button {
+            padding: 8px 15px;
+            margin: 5px;
+            background: rgba(100, 255, 218, 0.2);
+            border: 1px solid #64ffda;
+            border-radius: 5px;
+            color: #64ffda;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .control-button:hover {
+            background: rgba(100, 255, 218, 0.4);
+        }
+        
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #64ffda;
+            font-size: 18px;
+        }
+        
+        #canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        
+        .method-comparison {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .method-result {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 10px;
+            border-radius: 6px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .method-name {
+            font-weight: bold;
+            color: #64ffda;
+            margin-bottom: 5px;
+        }
+        
+        .spline-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <div class="section">
+                <h3>Orbital Parameters</h3>
+                <div class="input-group">
+                    <label>Semi-major Axis (AU)</label>
+                    <input type="number" id="semiMajorAxis" value="1.0" step="0.1" min="0.1" max="10">
+                </div>
+                <div class="input-group">
+                    <label>Eccentricity (0 ≤ e < 1)</label>
+                    <input type="number" id="eccentricity" value="0.2" step="0.01" min="0" max="0.99">
+                </div>
+                <div class="input-group">
+                    <label>Inclination (degrees)</label>
+                    <input type="number" id="inclination" value="15" step="1" min="0" max="180">
+                </div>
+                <div class="input-group">
+                    <label>Longitude of Ascending Node (°)</label>
+                    <input type="number" id="longitudeAscending" value="0" step="1" min="0" max="360">
+                </div>
+                <div class="input-group">
+                    <label>Argument of Periapsis (°)</label>
+                    <input type="number" id="argumentPeriapsis" value="0" step="1" min="0" max="360">
+                </div>
+            </div>
+            
+            <div class="section">
+                <h3>Mean Anomaly & Time</h3>
+                <div class="input-group">
+                    <label>Mean Anomaly (degrees)</label>
+                    <input type="number" id="meanAnomaly" value="45" step="1" min="0" max="360">
+                </div>
+                <div class="input-group">
+                    <label>Time Steps for Animation</label>
+                    <input type="number" id="timeSteps" value="100" min="50" max="500">
+                </div>
+                <div class="input-group">
+                    <label>Animation Speed</label>
+                    <input type="range" id="animationSpeed" min="1" max="10" value="5">
+                </div>
+            </div>
+            
+            <div class="section">
+                <h3>Spline Interpolation</h3>
+                <div class="spline-controls">
+                    <div class="input-group">
+                        <label>Spline Type</label>
+                        <select id="splineType">
+                            <option value="catmull">Catmull-Rom</option>
+                            <option value="cubic">Cubic</option>
+                            <option value="bezier">Bezier</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>Control Points</label>
+                        <input type="number" id="controlPoints" value="20" min="10" max="100">
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>Smoothing Factor</label>
+                    <input type="range" id="smoothingFactor" min="0.1" max="2.0" step="0.1" value="1.0">
+                </div>
+            </div>
+            
+            <button class="button" onclick="calculateAndVisualize()">Calculate & Visualize</button>
+            
+            <div class="section">
+                <h3>Method Comparison</h3>
+                <div class="method-comparison" id="methodComparison">
+                    <!-- Results will be populated here -->
+                </div>
+            </div>
+            
+            <div class="section">
+                <h3>Convergence History</h3>
+                <div style="max-height: 200px; overflow-y: auto;">
+                    <table class="results-table" id="convergenceTable">
+                        <thead>
+                            <tr>
+                                <th>Step</th>
+                                <th>E (rad)</th>
+                                <th>Error</th>
+                                <th>Method</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h3>Orbital Statistics</h3>
+                <div class="stats-grid" id="orbitalStats">
+                    <!-- Stats will be populated here -->
+                </div>
+            </div>
+        </div>
+        
+        <div class="main-view">
+            <canvas id="canvas"></canvas>
+            <div class="controls">
+                <button class="control-button" onclick="toggleAnimation()">Play/Pause</button>
+                <button class="control-button" onclick="resetView()">Reset View</button>
+                <button class="control-button" onclick="toggleTrails()">Toggle Trails</button>
+                <button class="control-button" onclick="toggleWireframe()">Wireframe</button>
+            </div>
+            <div class="loading" id="loading" style="display: none;">
+                Calculating orbits...
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Global variables
+        let scene, camera, renderer, controls;
+        let planet, sun, orbitPath, splinePath;
+        let animationId, isAnimating = false;
+        let orbitData = [];
+        let currentFrame = 0;
+        let showTrails = true, showWireframe = false;
+        
+        // Numerical methods for solving Kepler's equation
+        class KeplerSolver {
+            static newtonRaphson(e, M, E0 = null, tol = 1e-8, maxIter = 100) {
+                if (E0 === null) E0 = M;
+                let E = E0;
+                const history = [];
+                
+                for (let i = 0; i < maxIter; i++) {
+                    const f = E - e * Math.sin(E) - M;
+                    const df = 1 - e * Math.cos(E);
+                    
+                    if (Math.abs(df) < 1e-14) break;
+                    
+                    const deltaE = f / df;
+                    E = E - deltaE;
+                    
+                    history.push({
+                        step: i + 1,
+                        E: E,
+                        error: Math.abs(f),
+                        method: 'Newton'
+                    });
+                    
+                    if (Math.abs(deltaE) < tol) {
+                        return { E, history, converged: true, iterations: i + 1 };
+                    }
+                }
+                
+                return { E, history, converged: false, iterations: maxIter };
+            }
+            
+            static secant(e, M, E0 = null, E1 = null, tol = 1e-8, maxIter = 100) {
+                if (E0 === null) E0 = M;
+                if (E1 === null) E1 = M + 0.1;
+                
+                let En_1 = E0;
+                let En = E1;
+                const history = [];
+                
+                for (let i = 0; i < maxIter; i++) {
+                    const fn_1 = En_1 - e * Math.sin(En_1) - M;
+                    const fn = En - e * Math.sin(En) - M;
+                    
+                    if (Math.abs(fn - fn_1) < 1e-14) break;
+                    
+                    const En_new = En - fn * (En - En_1) / (fn - fn_1);
+                    
+                    history.push({
+                        step: i + 1,
+                        E: En_new,
+                        error: Math.abs(En_new - e * Math.sin(En_new) - M),
+                        method: 'Secant'
+                    });
+                    
+                    if (Math.abs(En_new - En) < tol) {
+                        return { E: En_new, history, converged: true, iterations: i + 1 };
+                    }
+                    
+                    En_1 = En;
+                    En = En_new;
+                }
+                
+                return { E: En, history, converged: false, iterations: maxIter };
+            }
+            
+            static bisection(e, M, a = 0, b = 2 * Math.PI, tol = 1e-8, maxIter = 100) {
+                let fa = a - e * Math.sin(a) - M;
+                let fb = b - e * Math.sin(b) - M;
+                const history = [];
+                
+                if (fa * fb > 0) {
+                    // Adjust bounds
+                    a = Math.max(0, M - e);
+                    b = Math.min(2 * Math.PI, M + e);
+                    fa = a - e * Math.sin(a) - M;
+                    fb = b - e * Math.sin(b) - M;
+                }
+                
+                for (let i = 0; i < maxIter; i++) {
+                    const c = (a + b) / 2;
+                    const fc = c - e * Math.sin(c) - M;
+                    
+                    history.push({
+                        step: i + 1,
+                        E: c,
+                        error: Math.abs(fc),
+                        method: 'Bisection'
+                    });
+                    
+                    if (Math.abs(fc) < tol || (b - a) / 2 < tol) {
+                        return { E: c, history, converged: true, iterations: i + 1 };
+                    }
+                    
+                    if (fa * fc < 0) {
+                        b = c;
+                        fb = fc;
+                    } else {
+                        a = c;
+                        fa = fc;
+                    }
+                }
+                
+                return { E: (a + b) / 2, history, converged: false, iterations: maxIter };
+            }
+        }
+        
+        // Spline interpolation class
+        class SplineInterpolator {
+            static catmullRom(points, segments = 100) {
+                const curve = new THREE.CatmullRomCurve3(points);
+                return curve.getPoints(segments);
+            }
+            
+            static cubic(points, segments = 100) {
+                if (points.length < 4) return points;
+                
+                const interpolated = [];
+                for (let i = 0; i < points.length - 3; i++) {
+                    const p0 = points[i];
+                    const p1 = points[i + 1];
+                    const p2 = points[i + 2];
+                    const p3 = points[i + 3];
+                    
+                    for (let t = 0; t <= 1; t += 1 / (segments / (points.length - 3))) {
+                        const t2 = t * t;
+                        const t3 = t2 * t;
+                        
+                        const x = 0.5 * ((2 * p1.x) + (-p0.x + p2.x) * t + 
+                                       (2*p0.x - 5*p1.x + 4*p2.x - p3.x) * t2 + 
+                                       (-p0.x + 3*p1.x - 3*p2.x + p3.x) * t3);
+                        const y = 0.5 * ((2 * p1.y) + (-p0.y + p2.y) * t + 
+                                       (2*p0.y - 5*p1.y + 4*p2.y - p3.y) * t2 + 
+                                       (-p0.y + 3*p1.y - 3*p2.y + p3.y) * t3);
+                        const z = 0.5 * ((2 * p1.z) + (-p0.z + p2.z) * t + 
+                                       (2*p0.z - 5*p1.z + 4*p2.z - p3.z) * t2 + 
+                                       (-p0.z + 3*p1.z - 3*p2.z + p3.z) * t3);
+                        
+                        interpolated.push(new THREE.Vector3(x, y, z));
+                    }
+                }
+                return interpolated;
+            }
+            
+            static bezier(points, segments = 100) {
+                if (points.length < 4) return points;
+                
+                const curve = new THREE.CubicBezierCurve3(
+                    points[0], points[1], points[2], points[3]
+                );
+                return curve.getPoints(segments);
+            }
+        }
+        
+        // Initialize Three.js scene
+        function initThreeJS() {
+            // Scene setup
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x000011);
+            
+            // Camera setup
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(5, 3, 5);
+            
+            // Renderer setup
+            renderer = new THREE.WebGLRenderer({ 
+                canvas: document.getElementById('canvas'),
+                antialias: true 
+            });
+            renderer.setSize(window.innerWidth * 0.75, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.3);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+            directionalLight.position.set(5, 5, 5);
+            directionalLight.castShadow = true;
+            scene.add(directionalLight);
+            
+            // Sun
+            const sunGeometry = new THREE.SphereGeometry(0.2, 32, 32);
+            const sunMaterial = new THREE.MeshBasicMaterial({ 
+                color: 0xffff00,
+                emissive: 0xffaa00,
+                emissiveIntensity: 0.5
+            });
+            sun = new THREE.Mesh(sunGeometry, sunMaterial);
+            scene.add(sun);
+            
+            // Planet
+            const planetGeometry = new THREE.SphereGeometry(0.05, 16, 16);
+            const planetMaterial = new THREE.MeshLambertMaterial({ color: 0x0077ff });
+            planet = new THREE.Mesh(planetGeometry, planetMaterial);
+            planet.castShadow = true;
+            scene.add(planet);
+            
+            // Controls
+            addMouseControls();
+            
+            // Handle window resize
+            window.addEventListener('resize', onWindowResize, false);
+            
+            animate();
+        }
+        
+        function addMouseControls() {
+            let isDragging = false;
+            let previousMousePosition = { x: 0, y: 0 };
+            
+            renderer.domElement.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                previousMousePosition = { x: e.clientX, y: e.clientY };
+            });
+            
+            renderer.domElement.addEventListener('mousemove', (e) => {
+                if (isDragging) {
+                    const deltaMove = {
+                        x: e.clientX - previousMousePosition.x,
+                        y: e.clientY - previousMousePosition.y
+                    };
+                    
+                    const deltaRotationQuaternion = new THREE.Quaternion()
+                        .setFromEuler(new THREE.Euler(
+                            toRadians(deltaMove.y * 1),
+                            toRadians(deltaMove.x * 1),
+                            0,
+                            'XYZ'
+                        ));
+                    
+                    camera.quaternion.multiplyQuaternions(deltaRotationQuaternion, camera.quaternion);
+                    previousMousePosition = { x: e.clientX, y: e.clientY };
+                }
+            });
+            
+            renderer.domElement.addEventListener('mouseup', () => {
+                isDragging = false;
+            });
+            
+            // Mouse wheel for zoom
+            renderer.domElement.addEventListener('wheel', (e) => {
+                const zoomSpeed = 0.1;
+                const direction = e.deltaY > 0 ? 1 : -1;
+                camera.position.multiplyScalar(1 + direction * zoomSpeed);
+            });
+        }
+        
+        function toRadians(angle) {
+            return angle * (Math.PI / 180);
+        }
+        
+        function toDegrees(angle) {
+            return angle * (180 / Math.PI);
+        }
+        
+        function onWindowResize() {
+            camera.aspect = (window.innerWidth * 0.75) / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth * 0.75, window.innerHeight);
+        }
+        
+        // Calculate orbital positions
+        function calculateOrbit(a, e, i, Ω, ω, M, steps = 100) {
+            const positions = [];
+            const solverResults = {};
+            
+            // Convert angles to radians
+            const i_rad = toRadians(i);
+            const Ω_rad = toRadians(Ω);
+            const ω_rad = toRadians(ω);
+            const M_rad = toRadians(M);
+            
+            // Solve Kepler's equation using different methods
+            solverResults.newton = KeplerSolver.newtonRaphson(e, M_rad);
+            solverResults.secant = KeplerSolver.secant(e, M_rad);
+            solverResults.bisection = KeplerSolver.bisection(e, M_rad);
+            
+            // Use Newton-Raphson result for orbit calculation
+            const E_final = solverResults.newton.E;
+            
+            // Generate orbit points
+            for (let step = 0; step <= steps; step++) {
+                const M_current = (2 * Math.PI * step) / steps;
+                const E_result = KeplerSolver.newtonRaphson(e, M_current);
+                const E = E_result.E;
+                
+                // Calculate true anomaly
+                const ν = 2 * Math.atan2(
+                    Math.sqrt(1 + e) * Math.sin(E / 2),
+                    Math.sqrt(1 - e) * Math.cos(E / 2)
+                );
+                
+                // Calculate distance
+                const r = a * (1 - e * Math.cos(E));
+                
+                // Position in orbital plane
+                const x_orb = r * Math.cos(ν);
+                const y_orb = r * Math.sin(ν);
+                const z_orb = 0;
+                
+                // Transform to 3D space
+                const x = (Math.cos(Ω_rad) * Math.cos(ω_rad) - Math.sin(Ω_rad) * Math.sin(ω_rad) * Math.cos(i_rad)) * x_orb +
+                         (-Math.cos(Ω_rad) * Math.sin(ω_rad) - Math.sin(Ω_rad) * Math.cos(ω_rad) * Math.cos(i_rad)) * y_orb;
+                
+                const y = (Math.sin(Ω_rad) * Math.cos(ω_rad) + Math.cos(Ω_rad) * Math.sin(ω_rad) * Math.cos(i_rad)) * x_orb +
+                         (-Math.sin(Ω_rad) * Math.sin(ω_rad) + Math.cos(Ω_rad) * Math.cos(ω_rad) * Math.cos(i_rad)) * y_orb;
+                
+                const z = Math.sin(i_rad) * Math.sin(ω_rad) * x_orb + Math.sin(i_rad) * Math.cos(ω_rad) * y_orb;
+                
+                positions.push(new THREE.Vector3(x, y, z));
+            }
+            
+            return { positions, solverResults, currentPosition: positions[Math.floor(steps * M / (2 * Math.PI))] };
+        }
+        
+        // Main calculation and visualization function
+        function calculateAndVisualize() {
+            document.getElementById('loading').style.display = 'block';
+            
+            // Get input values
+            const a = parseFloat(document.getElementById('semiMajorAxis').value);
+            const e = parseFloat(document.getElementById('eccentricity').value);
+            const i = parseFloat(document.getElementById('inclination').value);
+            const Ω = parseFloat(document.getElementById('longitudeAscending').value);
+            const ω = parseFloat(document.getElementById('argumentPeriapsis').value);
+            const M = parseFloat(document.getElementById('meanAnomaly').value);
+            const steps = parseInt(document.getElementById('timeSteps').value);
+            
+            // Calculate orbit
+            const orbitResult = calculateOrbit(a, e, i, Ω, ω, M, steps);
+            orbitData = orbitResult.positions;
+            
+            // Clear previous orbit paths
+            if (orbitPath) scene.remove(orbitPath);
+            if (splinePath) scene.remove(splinePath);
+            
+            // Create orbit path
+            const orbitGeometry = new THREE.BufferGeometry().setFromPoints(orbitData);
+            const orbitMaterial = new THREE.LineBasicMaterial({ 
+                color: 0x888888,
+                transparent: true,
+                opacity: 0.6 
+            });
+            orbitPath = new THREE.Line(orbitGeometry, orbitMaterial);
+            scene.add(orbitPath);
+            
+            // Create spline interpolated path
+            const splineType = document.getElementById('splineType').value;
+            const controlPoints = parseInt(document.getElementById('controlPoints').value);
+            const smoothingFactor = parseFloat(document.getElementById('smoothingFactor').value);
+            
+            // Sample control points from orbit
+            const sampledPoints = [];
+            for (let i = 0; i < controlPoints; i++) {
+                const index = Math.floor((i / controlPoints) * orbitData.length);
+                sampledPoints.push(orbitData[index]);
+            }
+            
+            let splinePoints;
+            switch (splineType) {
+                case 'catmull':
+                    splinePoints = SplineInterpolator.catmullRom(sampledPoints, steps * smoothingFactor);
+                    break;
+                case 'cubic':
+                    splinePoints = SplineInterpolator.cubic(sampledPoints, steps * smoothingFactor);
+                    break;
+                case 'bezier':
+                    if (sampledPoints.length >= 4) {
+                        splinePoints = SplineInterpolator.bezier(sampledPoints.slice(0, 4), steps * smoothingFactor);
+                    } else {
+                        splinePoints = sampledPoints;
+                    }
+                    break;
+                default:
+                    splinePoints = orbitData;
+            }
+            
+            const splineGeometry = new THREE.BufferGeometry().setFromPoints(splinePoints);
+            const splineMaterial = new THREE.LineBasicMaterial({ 
+                color: 0x00ff88,
+                linewidth: 2 
+            });
+            splinePath = new THREE.Line(splineGeometry, splineMaterial);
+            scene.add(splinePath);
+            
+            // Update planet position
+            if (orbitResult.currentPosition) {
+                planet.position.copy(orbitResult.currentPosition);
+            }
+            
+            // Update UI
+            updateMethodComparison(orbitResult.solverResults);
+            updateConvergenceTable(orbitResult.solverResults);
+            updateOrbitalStats(a, e, i, Ω, ω, M);
+            
+            document.getElementById('loading').style.display = 'none';
+            
+            // Reset animation
+            currentFrame = 0;
+            if (isAnimating) {
+                startAnimation();
+            }
+        }
+        
+        // Update method comparison display
+        function updateMethodComparison(results) {
+            const container = document.getElementById('methodComparison');
+            container.innerHTML = '';
+            
+            Object.keys(results).forEach(method => {
+                const result = results[method];
+                const div = document.createElement('div');
+                div.className = 'method-result';
+                div.innerHTML = `
+                    <div class="method-name">${method.toUpperCase()}</div>
+                    <div>E: ${result.E.toFixed(6)}</div>
+                    <div>Steps: ${result.iterations}</div>
+                    <div style="color: ${result.converged ? '#4CAF50' : '#FF5722'}">
+                        ${result.converged ? 'Converged' : 'Failed'}
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+        
+        // Update convergence table
+        function updateConvergenceTable(results) {
+            const tbody = document.querySelector('#convergenceTable tbody');
+            tbody.innerHTML = '';
+            
+            // Combine all history data
+            const allHistory = [];
+            Object.keys(results).forEach(method => {
+                if (results[method].history) {
+                    allHistory.push(...results[method].history);
+                }
+            });
+            
+            // Sort by step and method
+            allHistory.sort((a, b) => {
+                if (a.method !== b.method) {
+                    return a.method.localeCompare(b.method);
+                }
+                return a.step - b.step;
+            });
+            
+            // Display first 20 entries
+            allHistory.slice(0, 20).forEach(entry => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${entry.step}</td>
+                    <td>${entry.E.toFixed(6)}</td>
+                    <td>${entry.error.toExponential(2)}</td>
+                    <td>${entry.method}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+        
+        // Update orbital statistics
+        function updateOrbitalStats(a, e, i, Ω, ω, M) {
+            const stats = calculateOrbitalStats(a, e, i, Ω, ω, M);
+            const container = document.getElementById('orbitalStats');
+            container.innerHTML = '';
+            
+            Object.keys(stats).forEach(key => {
+                const div = document.createElement('div');
+                div.className = 'stat-item';
+                div.innerHTML = `
+                    <div class="stat-value">${stats[key].value}</div>
+                    <div class="stat-label">${stats[key].label}</div>
+                `;
+                container.appendChild(div);
+            });
+        }
+        
+        // Calculate detailed orbital statistics
+        function calculateOrbitalStats(a, e, i, Ω, ω, M) {
+            const GM = 1; // Standard gravitational parameter (normalized)
+            const period = 2 * Math.PI * Math.sqrt(Math.pow(a, 3) / GM);
+            const apoapsis = a * (1 + e);
+            const periapsis = a * (1 - e);
+            const meanMotion = Math.sqrt(GM / Math.pow(a, 3));
+            const specificEnergy = -GM / (2 * a);
+            const angularMomentum = Math.sqrt(GM * a * (1 - e * e));
+            
+            return {
+                period: { value: period.toFixed(2), label: 'Period (years)' },
+                apoapsis: { value: apoapsis.toFixed(3), label: 'Apoapsis (AU)' },
+                periapsis: { value: periapsis.toFixed(3), label: 'Periapsis (AU)' },
+                meanMotion: { value: meanMotion.toFixed(6), label: 'Mean Motion (rad/year)' },
+                energy: { value: specificEnergy.toFixed(6), label: 'Specific Energy' },
+                momentum: { value: angularMomentum.toFixed(6), label: 'Angular Momentum' }
+            };
+        }
+        
+        // Animation functions
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            if (isAnimating && orbitData.length > 0) {
+                const speed = parseInt(document.getElementById('animationSpeed').value);
+                currentFrame = (currentFrame + speed) % orbitData.length;
+                planet.position.copy(orbitData[currentFrame]);
+                
+                // Update planet trail
+                if (showTrails) {
+                    updateTrail();
+                }
+            }
+            
+            // Rotate camera around the scene
+            const time = Date.now() * 0.0005;
+            camera.lookAt(scene.position);
+            
+            renderer.render(scene, camera);
+        }
+        
+        function startAnimation() {
+            isAnimating = true;
+        }
+        
+        function stopAnimation() {
+            isAnimating = false;
+        }
+        
+        function toggleAnimation() {
+            if (isAnimating) {
+                stopAnimation();
+            } else {
+                startAnimation();
+            }
+        }
+        
+        function resetView() {
+            camera.position.set(5, 3, 5);
+            camera.lookAt(0, 0, 0);
+            currentFrame = 0;
+            if (orbitData.length > 0) {
+                planet.position.copy(orbitData[0]);
+            }
+        }
+        
+        function toggleTrails() {
+            showTrails = !showTrails;
+            if (!showTrails && planet.trail) {
+                scene.remove(planet.trail);
+                planet.trail = null;
+            }
+        }
+        
+        function toggleWireframe() {
+            showWireframe = !showWireframe;
+            if (orbitPath) {
+                orbitPath.material.wireframe = showWireframe;
+            }
+            if (splinePath) {
+                splinePath.material.wireframe = showWireframe;
+            }
+        }
+        
+        // Planet trail system
+        let trailPoints = [];
+        const maxTrailPoints = 50;
+        
+        function updateTrail() {
+            trailPoints.push(planet.position.clone());
+            if (trailPoints.length > maxTrailPoints) {
+                trailPoints.shift();
+            }
+            
+            if (planet.trail) {
+                scene.remove(planet.trail);
+            }
+            
+            if (trailPoints.length > 1) {
+                const trailGeometry = new THREE.BufferGeometry().setFromPoints(trailPoints);
+                const trailMaterial = new THREE.LineBasicMaterial({ 
+                    color: 0xff4444,
+                    transparent: true,
+                    opacity: 0.7
+                });
+                planet.trail = new THREE.Line(trailGeometry, trailMaterial);
+                scene.add(planet.trail);
+            }
+        }
+        
+        // Advanced spline analysis
+        function analyzeSplineAccuracy() {
+            if (orbitData.length === 0) return;
+            
+            const splineType = document.getElementById('splineType').value;
+            const controlPoints = parseInt(document.getElementById('controlPoints').value);
+            
+            // Sample control points
+            const sampledPoints = [];
+            for (let i = 0; i < controlPoints; i++) {
+                const index = Math.floor((i / controlPoints) * orbitData.length);
+                sampledPoints.push(orbitData[index]);
+            }
+            
+            // Generate spline
+            let splinePoints;
+            switch (splineType) {
+                case 'catmull':
+                    splinePoints = SplineInterpolator.catmullRom(sampledPoints, orbitData.length);
+                    break;
+                case 'cubic':
+                    splinePoints = SplineInterpolator.cubic(sampledPoints, orbitData.length);
+                    break;
+                case 'bezier':
+                    if (sampledPoints.length >= 4) {
+                        splinePoints = SplineInterpolator.bezier(sampledPoints.slice(0, 4), orbitData.length);
+                    } else {
+                        splinePoints = sampledPoints;
+                    }
+                    break;
+            }
+            
+            // Calculate error metrics
+            let totalError = 0;
+            let maxError = 0;
+            
+            const minLength = Math.min(orbitData.length, splinePoints.length);
+            for (let i = 0; i < minLength; i++) {
+                const error = orbitData[i].distanceTo(splinePoints[i]);
+                totalError += error;
+                maxError = Math.max(maxError, error);
+            }
+            
+            const avgError = totalError / minLength;
+            
+            console.log(`Spline Analysis (${splineType}):`);
+            console.log(`Average Error: ${avgError.toFixed(6)}`);
+            console.log(`Maximum Error: ${maxError.toFixed(6)}`);
+            console.log(`Control Points: ${controlPoints}`);
+            
+            return { avgError, maxError, controlPoints };
+        }
+        
+        // Export functions
+        function exportOrbitData() {
+            if (orbitData.length === 0) {
+                alert('No orbit data to export. Please calculate an orbit first.');
+                return;
+            }
+            
+            const data = orbitData.map((point, index) => ({
+                index: index,
+                x: point.x,
+                y: point.y,
+                z: point.z,
+                distance: point.length()
+            }));
+            
+            const csv = 'Index,X,Y,Z,Distance\n' + 
+                       data.map(row => `${row.index},${row.x},${row.y},${row.z},${row.distance}`).join('\n');
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'orbit_data.csv';
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            switch(e.key) {
+                case ' ':
+                    e.preventDefault();
+                    toggleAnimation();
+                    break;
+                case 'r':
+                    resetView();
+                    break;
+                case 't':
+                    toggleTrails();
+                    break;
+                case 'w':
+                    toggleWireframe();
+                    break;
+                case 'e':
+                    exportOrbitData();
+                    break;
+                case 'a':
+                    analyzeSplineAccuracy();
+                    break;
+            }
+        });
+        
+        // Enhanced spline interpolator with research-grade methods
+        class AdvancedSplineInterpolator extends SplineInterpolator {
+            static bSpline(points, degree = 3, segments = 100) {
+                if (points.length < degree + 1) return points;
+                
+                const n = points.length - 1;
+                const m = n + degree + 1;
+                const knots = [];
+                
+                // Generate uniform knot vector
+                for (let i = 0; i <= m; i++) {
+                    if (i <= degree) knots[i] = 0;
+                    else if (i >= m - degree) knots[i] = 1;
+                    else knots[i] = (i - degree) / (n - degree + 1);
+                }
+                
+                const result = [];
+                for (let t = 0; t <= 1; t += 1 / segments) {
+                    let point = new THREE.Vector3(0, 0, 0);
+                    for (let i = 0; i <= n; i++) {
+                        const basis = this.bSplineBasis(i, degree, t, knots);
+                        point.add(points[i].clone().multiplyScalar(basis));
+                    }
+                    result.push(point);
+                }
+                
+                return result;
+            }
+            
+            static bSplineBasis(i, p, t, knots) {
+                if (p === 0) {
+                    return (knots[i] <= t && t < knots[i + 1]) ? 1 : 0;
+                }
+                
+                let c1 = 0, c2 = 0;
+                if (knots[i + p] !== knots[i]) {
+                    c1 = (t - knots[i]) / (knots[i + p] - knots[i]) * this.bSplineBasis(i, p - 1, t, knots);
+                }
+                if (knots[i + p + 1] !== knots[i + 1]) {
+                    c2 = (knots[i + p + 1] - t) / (knots[i + p + 1] - knots[i + 1]) * this.bSplineBasis(i + 1, p - 1, t, knots);
+                }
+                
+                return c1 + c2;
+            }
+            
+            static nurbs(points, weights, degree = 3, segments = 100) {
+                // NURBS implementation for advanced curve fitting
+                const weightedPoints = points.map((p, i) => p.clone().multiplyScalar(weights[i] || 1));
+                return this.bSpline(weightedPoints, degree, segments);
+            }
+        }
+        
+        // Research mode toggle
+        let researchMode = false;
+        
+        function toggleResearchMode() {
+            researchMode = !researchMode;
+            const sidebar = document.querySelector('.sidebar');
+            
+            if (researchMode) {
+                // Add advanced research controls
+                const researchSection = document.createElement('div');
+                researchSection.className = 'section';
+                researchSection.id = 'researchSection';
+                researchSection.innerHTML = `
+                    <h3>Research Tools</h3>
+                    <button class="button" onclick="analyzeSplineAccuracy()" style="margin-bottom: 10px;">
+                        Analyze Spline Accuracy
+                    </button>
+                    <button class="button" onclick="exportOrbitData()" style="margin-bottom: 10px;">
+                        Export Data (CSV)
+                    </button>
+                    <button class="button" onclick="compareAllMethods()" style="margin-bottom: 10px;">
+                        Compare All Methods
+                    </button>
+                    <div class="input-group">
+                        <label>Research Notes</label>
+                        <textarea id="researchNotes" style="width: 100%; height: 60px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 8px;"></textarea>
+                    </div>
+                `;
+                sidebar.appendChild(researchSection);
+            } else {
+                const researchSection = document.getElementById('researchSection');
+                if (researchSection) {
+                    researchSection.remove();
+                }
+            }
+        }
+        
+        function compareAllMethods() {
+            if (orbitData.length === 0) {
+                alert('Please calculate an orbit first.');
+                return;
+            }
+            
+            console.log('=== COMPREHENSIVE METHOD COMPARISON ===');
+            
+            // Test different spline methods
+            const methods = ['catmull', 'cubic', 'bezier'];
+            const controlPointCounts = [10, 20, 30, 50];
+            
+            methods.forEach(method => {
+                controlPointCounts.forEach(cpCount => {
+                    document.getElementById('splineType').value = method;
+                    document.getElementById('controlPoints').value = cpCount;
+                    
+                    const analysis = analyzeSplineAccuracy();
+                    if (analysis) {
+                        console.log(`${method} (${cpCount} points): Avg=${analysis.avgError.toFixed(6)}, Max=${analysis.maxError.toFixed(6)}`);
+                    }
+                });
+            });
+        }
+        
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            initThreeJS();
+            
+            // Add research mode button
+            const controls = document.querySelector('.controls');
+            const researchBtn = document.createElement('button');
+            researchBtn.className = 'control-button';
+            researchBtn.textContent = 'Research Mode';
+            researchBtn.onclick = toggleResearchMode;
+            controls.appendChild(researchBtn);
+            
+            // Initial calculation
+            calculateAndVisualize();
+            
+            console.log('Advanced Kepler Orbit Simulator loaded successfully!');
+            console.log('Keyboard shortcuts:');
+            console.log('  Space: Play/Pause animation');
+            console.log('  R: Reset view');
+            console.log('  T: Toggle trails');
+            console.log('  W: Toggle wireframe');
+            console.log('  E: Export data');
+            console.log('  A: Analyze spline accuracy');
+        });
+    </script>
+</body>
+</html>
